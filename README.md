@@ -6,7 +6,7 @@ This is the pipe viewer project from the "Hands-On Systems Programming with Rust
 
 https://www.udemy.com/course/hands-on-systems-programming-with-rust/
 
-# Additional information
+# Helpful commands
 
 ## Generating files of random data
 
