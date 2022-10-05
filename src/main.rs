@@ -22,7 +22,7 @@
 
 use pipe_viewer::{args::ParsedArgs, read, stats, write};
 use std::io::Result;
-use std::sync::{Arc, Mutex};
+use std::sync::mpsc;
 use std::thread;
 
 fn main() -> Result<()> {
@@ -33,12 +33,13 @@ fn main() -> Result<()> {
         silent,
     } = args;
 
-    let quit_read = Arc::new(Mutex::new(false));
-    let (quit_stats, quit_write) = (quit_read.clone(), quit_read.clone());
+    // name of senders and receivers is based on name of *receiver*
+    let (stats_tx, stats_rx) = mpsc::channel();
+    let (write_tx, write_rx) = mpsc::channel();
 
-    let read_handle = thread::spawn(move || read::read_loop(&infile, quit_read));
-    let stats_handle = thread::spawn(move || stats::stats_loop(silent, quit_stats));
-    let write_handle = thread::spawn(move || write::write_loop(&outfile, quit_write));
+    let read_handle = thread::spawn(move || read::read_loop(&infile, stats_tx));
+    let stats_handle = thread::spawn(move || stats::stats_loop(silent, stats_rx, write_tx));
+    let write_handle = thread::spawn(move || write::write_loop(&outfile, write_rx));
 
     // crash if any threads have crashed
     let read_io_result = read_handle.join().unwrap();

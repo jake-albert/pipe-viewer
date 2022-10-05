@@ -1,10 +1,8 @@
-use std::{
-    fs::File,
-    io::{self, BufWriter, ErrorKind, Result, Write},
-    sync::{Arc, Mutex},
-};
+use std::fs::File;
+use std::io::{self, BufWriter, ErrorKind, Result, Write};
+use std::sync::mpsc::Receiver;
 
-pub fn write_loop(outfile: &str, quit: Arc<Mutex<bool>>) -> Result<()> {
+pub fn write_loop(outfile: &str, write_rx: Receiver<Vec<u8>>) -> Result<()> {
     let mut writer: Box<dyn Write> = if !outfile.is_empty() {
         Box::new(BufWriter::new(File::create(outfile)?))
     } else {
@@ -12,15 +10,9 @@ pub fn write_loop(outfile: &str, quit: Arc<Mutex<bool>>) -> Result<()> {
     };
 
     loop {
-        // TODO(jake): Receive bytes from stats thread. For now we use empty
-        let buffer: Vec<u8> = Vec::new();
-
-        // Use a narrower scope so we quickly release the lock on quit
-        {
-            let quit = quit.lock().unwrap();
-            if *quit {
-                break;
-            }
+        let buffer = write_rx.recv().unwrap();
+        if buffer.is_empty() {
+            break;
         }
 
         if let Err(e) = writer.write_all(&buffer) {
